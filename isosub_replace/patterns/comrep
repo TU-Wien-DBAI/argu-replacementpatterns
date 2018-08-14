@@ -1,0 +1,11 @@
+arg(a).
+arg(c).
+arg(d).
+att(d,a).
+att(c,d).
+core(a).
+core(c).
+core(d).
+sem(com).
+pin(a).
+pin(c).

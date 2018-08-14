@@ -1,0 +1,5 @@
+arg(a).
+att(a,a).
+sem(stb).
+core(a).
+pin(a).

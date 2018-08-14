@@ -1,0 +1,17 @@
+arg(a).
+arg(b).
+arg(c).
+arg(d).
+arg(e).
+arg(f).
+att(a,b).
+att(b,c).
+att(b,f).
+att(c,a).
+att(c,d).
+att(e,a).
+core(a).
+core(b).
+core(c).
+core(d).
+sem(prf).

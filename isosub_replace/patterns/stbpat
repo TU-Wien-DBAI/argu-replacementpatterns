@@ -1,0 +1,13 @@
+arg(p1).
+arg(c1).
+arg(c2).
+arg(c3).
+core(c1).
+core(c2).
+core(c3).
+att(p1,c1).
+att(c1,c2).
+att(c2,c3).
+att(c3,c1).
+pin(c2).
+pin(c3).
