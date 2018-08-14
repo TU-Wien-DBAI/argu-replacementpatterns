@@ -1,0 +1,74 @@
+%needs com_rules file
+
+%E ∈ grd C(F) if E ∈ cf (F) and E = F∞_{F,C,E}(∅)
+grdc(F,E) :- comc(F,E), firstEq(F,E,E,N), #int(N).
+
+%collect full F_{F,C,E}(S) for every E/S combination instead of just negation
+fixing(F,E,S,[]) :- comc(F,E), argSet(F,S).
+fixing(F,E,S,Args) :- #append(Prev,[A],Args), fixing(F,E,S,Prev), argument(F,A), #length(Prev,0), not notInLeft(F,E,S,A), #member(A,E).
+fixing(F,E,S,Args) :- #append(Prev,[A],Args), fixing(F,E,S,Prev), argument(F,A), #length(Prev,0), not notInRight(F,S,A), #member(A,C), core(C).
+fixing(F,E,S,Args) :- #append(Prev,[A],Args), fixing(F,E,S,Prev), argument(F,A), not notInLeft(F,E,S,A), #last(Prev,B), B<A, #member(A,E).
+fixing(F,E,S,Args) :- #append(Prev,[A],Args), fixing(F,E,S,Prev), argument(F,A), not notInRight(F,S,A), #last(Prev,B), B<A, #member(A,C), core(C).
+notMaxFixing(F,E,S,Prev) :- fixing(F,E,S,Prev), fixing(F,E,S,Args), argument(F,A), comc(F,E), argSet(F,S), #member(A,Args), not #member(A,Prev).
+maxFixing(F,E,S,Args) :- not notMaxFixing(F,E,S,Args), comc(F,E), argSet(F,S), fixing(F,E,S,Args).
+
+%compute iterations (f,e,s,result,iteration); number of iterations bounded by number of arguments
+grdIteration(F,E,[],Res,0) :- comc(F,E), maxFixing(F,E,[],Res).
+grdIteration(F,E,Prev,Res,N) :- comc(F,E), maxFixing(F,E,Prev,Res), grdIteration(F,E,S,Prev,M), M=N-1, #int(N), #int(M), N<=C, #count{Args : argument(F,Args)}=C.
+eqIteration(F,E,Res,N) :- grdIteration(F,E,Res,Res,N).
+notFirstEq(F,E,Res,N) :- eqIteration(F,E,Res,M), M<N, #int(N), #int(M).
+firstEq(F,E,Res,N) :- comc(F,E), eqIteration(F,E,Res,N), not notFirstEq(F,E,Res,N), #int(N).
+
+%(2) grd C (F ) = grd C (G)
+grdDifference(F,G,E) :- grdc(F,E), not grdc(G,E), arguments(F,X), arguments(G,Y).
+%(3) for all E∈grd_C(F) and all S ⊆ A(F)\(C∪E) (=SinA in comc_rules)
+EXFalse(F,G,E,X) :- grdc(F,E), grdc(G,E), not equalDefFix(F,G,E,X), SinA(F,E,X).
+EXFalse(F,G,E,X) :- grdc(F,E), SinA(F,E,X), correctDef(F,E,X), excludedNonEq(F,G,E,X).
+EXFalse(F,G,E,X) :- grdc(F,E), grdc(G,E), SinA(F,E,X), correctDef(F,E,X), not withoutXEq(F,G,X,E).
+%(3a) F∞_{F\S,E∪C}(∅) = F∞_{G\S,E∪C}(∅)
+equalDefFix(F,G,E,X) :- firstDefEq(F,E,X,Res,N), firstDefEq(G,E,X,Res,M), SinA(F,E,X), #int(N), #int(M), F!=G.
+%(3b) if F∞_{F\S,E∪C}(∅) = E then E⁺_F\(C∪S) = E⁺_G\(C∪S)
+correctDef(F,E,X) :- firstDefEq(F,E,X,E,N), #int(N).
+excludedNonEq(F,G,E,X) :- grdc(F,E), grdc(G,E), SinA(F,E,X), core(C), argument(F,A), not #member(A,C), not #member(A,X), isAttacked(F,A,E), not isAttacked(G,A,E).
+%(3c) if F∞_{F\S,E∪C}(∅) = E then F_{F\S}(E) = F_{G\S}(E)
+withoutXDiff(F,G,S,E) :- xinEplus(F,S,X,E), not xinEplus(G,S,X,E), argument(F,X), argument(G,X).
+withoutXEq(F,G,S,E) :- not withoutXDiff(F,G,S,E), SinA(F,E,S), grdc(F,E), grdc(G,E), F!=G.
+
+%new defence definition: F_{F\X,E∪C}(S) = {a∈E∪C | S defends a in F\X}
+%S does defend A (in E or core) against some attack B in F\X
+argDef(F,E,X,S,A,B) :- argument(F,A), grdc(F,E), SinA(F,E,X), argSet(F,S), #member(A,E), not #member(A,X), argument(F,B), not #member(B,X), attack(F,B,A), argument(F,C), not #member(C,X), attack(F,C,B), #member(C,S).
+argDef(F,E,X,S,A,B) :- argument(F,A), grdc(F,E), SinA(F,E,X), argSet(F,S), #member(A,R), core(R), not #member(A,X), argument(F,B), not #member(B,X), attack(F,B,A), argument(F,C), not #member(C,X), attack(F,C,B), #member(C,S).
+%stuff that is not attacked in F\X does not need to be defended
+hasAttack(F,X,A) :- argument(F,A), argument(F,B), SinA(F,E,X), attack(F,B,A), not #member(A,X), not #member(B,X).
+argDef(F,E,X,S,A,B) :- argument(F,A), argument(F,B), grdc(F,E), SinA(F,E,X), argSet(F,S), not hasAttack(F,X,A), #member(A,E), not #member(A,X), not #member(B,X).
+argDef(F,E,X,S,A,B) :- argument(F,A), argument(F,B), grdc(F,E), SinA(F,E,X), argSet(F,S), not hasAttack(F,X,A), not #member(A,X), not #member(B,X), #member(B,C), core(C).
+%S does not defend A (in E or core) against all attacks B in F\X
+notFullDef(F,E,X,S,A) :- argument(F,A), grdc(F,E), SinA(F,E,X), argSet(F,S), #member(A,E), not #member(A,X), not argDef(F,E,X,S,A,B), argument(F,B), not #member(B,X), attack(F,B,A).
+notFullDef(F,E,X,S,A) :- argument(F,A), grdc(F,E), SinA(F,E,X), argSet(F,S), core(C), #member(A,C), not #member(A,X), not argDef(F,E,X,S,A,B), argument(F,B), not #member(B,X), attack(F,B,A).
+%S does defend A (in E or core) against all attacks B in F\X
+fullDef(F,E,X,S,A) :- argument(F,A), grdc(F,E), SinA(F,E,X), argSet(F,S), #member(A,E), not #member(A,X), not notFullDef(F,E,X,S,A).
+fullDef(F,E,X,S,A) :- argument(F,A), grdc(F,E), SinA(F,E,X), argSet(F,S), #member(A,C), core(C), not #member(A,X), not notFullDef(F,E,X,S,A).
+%collect iteratively all A (in E or core) fully defended by S in F\X, then compute max sets
+defList(F,E,X,S,[]) :- grdc(F,E), SinA(F,E,X), argSet(F,S).
+defList(F,E,X,S,New) :- grdc(F,E), SinA(F,E,X), argSet(F,S), fullDef(F,E,X,S,A), argument(F,A), #append([],[A],New).
+defList(F,E,X,S,New) :- grdc(F,E), SinA(F,E,X), argSet(F,S), fullDef(F,E,X,S,A), argument(F,A), #append(Old,[A],New), defList(F,E,X,S,Old), #last(Old,B), B<A.
+subDefList(F,E,X,S,L) :- grdc(F,E), SinA(F,E,X), argSet(F,S), defList(F,E,X,S,L), defList(F,E,X,S,G), #subList(L,G), L!=G.
+maxDefList(F,E,X,S,L) :- grdc(F,E), SinA(F,E,X), argSet(F,S), defList(F,E,X,S,L), not subDefList(F,E,X,S,L).
+
+%compute iterations
+defIteration(F,E,X,[],Res,0) :- grdc(F,E), maxDefList(F,E,X,[],Res).
+defIteration(F,E,X,Prev,Res,N) :- grdc(F,E), SinA(F,E,X), maxDefList(F,E,X,Prev,Res), defIteration(F,E,X,S,Prev,M), M=N-1, #int(M), #int(N), N<=C, #count{Args : argument(F,Args)}=C.
+eqDefIteration(F,E,X,Res,N) :- defIteration(F,E,X,Res,Res,N).
+notFirstDefEq(F,E,X,Res,N) :- eqDefIteration(F,E,X,Res,M), M<N, #int(N), #int(M).
+firstDefEq(F,E,X,Res,N) :- SinA(F,E,X), eqDefIteration(F,E,X,Res,N), not notFirstDefEq(F,E,X,Res,N), #int(N).
+
+%admissible inequivalency predicate
+notGrdEquiv(F,G) :- outDiff(F,G,A), F<G.
+notGrdEquiv(G,F) :- outDiff(F,G,A), F>G.
+notGrdEquiv(F,G) :- grdDifference(F,G,E), F<G.
+notGrdEquiv(G,F) :- grdDifference(F,G,E), F>G.
+notGrdEquiv(F,G) :- grdc(F,E), grdc(G,E), EXFalse(F,G,E,X), SinA(F,E,X), F<G.
+notGrdEquiv(G,F) :- grdc(F,E), grdc(G,E), EXFalse(F,G,E,X), SinA(F,E,X), F>G.
+
+%evaluation
+grdEquiv(F,G) :- not notGrdEquiv(F,G), af(F), af(G), F<G. 

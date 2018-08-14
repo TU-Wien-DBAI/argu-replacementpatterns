@@ -1,0 +1,40 @@
+%is needed for every other rules file
+
+%constant, change for testing/time constraint purposes!
+#maxint=20.
+
+%basic predicates
+%basic checks for set memberships
+af(F) :- arguments(F,X).
+argument(F,A) :- #member(A,X), arguments(F,X), domain(A), af(F).
+%checks for what is attacking what
+attack(F,A,B) :- argument(F,A), argument(F,B), #member([A,B],X), attacks(F,X).
+%A is attacked/ing (by) a set
+isAttacking(F,A,Y) :- argument(F,A), cf(F,Y), argument(F,B), #member(B,Y), attack(F,A,B).
+isAttacked(F,A,Y) :- argument(F,A), cf(F,Y), argument(F,B), #member(B,Y), attack(F,B,A).
+isConflicting(F,A,Y) :- isAttacking(F,A,Y).
+isConflicting(F,A,Y) :- isAttacked(F,A,Y).
+%checks if an argument in the core is also in the domain.
+dom(A) :- #member(A,C), core(C), domain(A).
+dom(A) :- not #member(A,C), core(C), domain(A).
+
+%A not in C
+outside(F,A) :- argument(F,A), not #member(A,C), core(C).
+%computing the difference between afs outside the core (1) A(F)\C=A(G)\C
+outDiff(F,G,A) :- outside(F,A), not outside(G,A), af(F), af(G).
+%compute arguments that are outside of the core but in plus (for (3a))
+outsidePlus(F,E,A) :- af(F), cf(F,E), isAttacked(F,A,E), argument(F,A), not #member(A,C), core(C).
+%E⁺_F\C=E⁺_G\C
+notBothOutPlus(F,G,E,A) :- af(F), af(G), cf(F,E), cf(G,E), outsidePlus(F,E,A), not outsidePlus(G,E,A).
+%E⁻_F\E⁺_F=E⁻_G\E⁺_G
+eout(F,E,R) :- argument(F,R), not isAttacked(F,R,E), isAttacking(F,R,E), cf(F,E).
+notBothEOut(F,G,E,R) :- eout(F,E,R), not eout(G,E,R), cf(F,E), cf(G,E), af(F), af(G).
+
+%all sets of arguments
+argSet(F,[]) :- arguments(F,X).
+argSet(F,X) :- #append(Y,[A],X), argSet(F,Y), argument(F,A), #length(Y,0).
+argSet(F,X) :- #append(Y,[A],X), argSet(F,Y), argument(F,A), not #member(A,Y), #last(Y,B), B<A.
+
+%building conflict-free sets (null set, sets of size 1, unique sets of greater size)
+notCf(F,E) :- argSet(F,E), argument(F,A), #member(A,E), argument(F,B), #member(B,E), attack(F,A,B).
+cf(F,E) :- argSet(F,E), not notCf(F,E).

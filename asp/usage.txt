@@ -1,0 +1,1 @@
+using dlv load the basic_rules file, a file containing facts describing the af and the *_rules file where * is the desired semantics

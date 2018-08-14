@@ -1,0 +1,20 @@
+%AnC subset E°⁺_F (cr-st), E°⁺_F is E + all args attacked by E (stbc)
+notAncSub(F,E) :- argument(F,A), core(C), #member(A,C), not #member(A,E), not isAttacked(F,A,E), cf(F,E).
+stbc(F,E) :- cf(F,E), not notAncSub(F,E).
+
+%equivalency between AFs wrt c-restricted stable semantics
+%(1) stb_C(F)=stb_C(G)
+stbDifference(F,G,E) :- stbc(F,E), not stbc(G,E), arguments(F,X), arguments(G,Y).
+%(2) stb_C(F)!=null -> A(F)\C=A(G)\C
+nonempty(F) :- stbc(F,E).
+
+%stable inequivalency predicate
+notStEquiv(F,G) :- stbDifference(F,G,E), F<G.
+notStEquiv(G,F) :- stbDifference(F,G,E), F>G.
+notStEquiv(F,G) :- nonempty(F), outDiff(F,G,A), F<G.
+notStEquiv(G,F) :- nonempty(F), outDiff(F,G,A), F>G.
+notStEquiv(F,G) :- stbc(F,E), stbc(G,E), notBothOutPlus(F,G,E,A), F<G.
+notStEquiv(G,F) :- stbc(F,E), stbc(G,E), notBothOutPlus(F,G,E,A), F>G.
+
+%evaluation
+stbEquiv(F,G) :- not notStEquiv(F,G), af(F), af(G), F<G.

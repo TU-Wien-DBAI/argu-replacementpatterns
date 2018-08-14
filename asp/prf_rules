@@ -1,0 +1,51 @@
+%needs adm_rules file
+
+%E ∈ prf_C(F) if E ∈ adm_C(F)
+prfc(F,E) :- admc(F,E), not prfNotImplied(F,E).
+
+%must be true for all D regarding a potential E
+%E\C = D\C (negation)
+diffArgsOut(F,E,D) :- outside(F,A), #member(A,E), not #member(A,D), argument(F,A), admc(F,E), admc(F,D).
+diffArgsOut(F,E,D) :- outside(F,A), not #member(A,E), #member(A,D), argument(F,A), admc(F,E), admc(F,D).
+%E⁺_F\C ⊆ D⁺_F\C
+plusOutNotCommon(F,E,D) :- argument(F,A), core(C), not #member(A,C), admc(F,E), admc(F,D), isAttacked(F,A,E), not isAttacked(F,A,D).
+%E⁻_F\E⁺_F ⊇ D⁻_F\D⁺_F
+PMNotInc(F,E,D) :- admc(F,E), admc(F,D), argument(F,A), not isAttacking(F,A,E), isAttacking(F,A,D), not isAttacked(F,A,D).
+PMNotInc(F,E,D) :- admc(F,E), admc(F,D), argument(F,A), isAttacked(F,A,E), isAttacking(F,A,D), not isAttacked(F,A,D).
+
+%first 3 conditions combined
+leftPrf(F,E,D) :- admc(F,E), admc(F,D), not diffArgsOut(F,E,D), not plusOutNotCommon(F,E,D), not PMNotInc(F,E,D).
+
+%and produce E∩C /⊂ D∩C (incl no equality)
+%E∩C
+notCommon(F,E,X) :- admc(F,E), cf(F,X), argument(F,A), #member(A,X), #member(A,E), core(C), not #member(A,C).
+notCommon(F,E,X) :- admc(F,E), cf(F,X), argument(F,A), #member(A,X), not #member(A,E), core(C), #member(A,C).
+notCommon(F,E,X) :- admc(F,E), cf(F,X), argument(F,A), #member(A,X), not #member(A,E), core(C), not #member(A,C).
+common(F,E,X) :- admc(F,E), cf(F,X), not notCommon(F,E,X).
+notMaxCommon(F,E,X) :- common(F,E,X), common(F,E,Y), #length(X,A), #length(Y,B), B>A, X!=Y.
+enc(F,E,X) :- not notMaxCommon(F,E,X), common(F,E,X).
+
+%E∩C /⊂ D∩C
+encNotSubset(F,E,D) :- argument(F,A), admc(F,E), admc(F,D), enc(F,E,X), enc(F,D,Y), #member(A,X), not #member(A,Y).
+encNotSubset(F,E,D) :- admc(F,E), admc(F,D), enc(F,E,X), enc(F,D,Y), X=Y.
+encSubset(F,E,D) :- admc(F,E), admc(F,D), not encNotSubset(F,E,D).
+
+%implication
+prfNotImplied(F,E) :- admc(F,E), admc(F,D), leftPrf(F,E,D), encSubset(F,E,D), E!=D.
+
+%equivalency between AFs wrt c-restricted preferred semantics
+%(2) prf_C(F)=prf_C(G)
+prfDifference(F,G,E) :- prfc(F,E), not prfc(G,E), arguments(F,X), arguments(G,Y).
+
+%preferred inequivalency predicate
+notPrfEquiv(F,G) :- outDiff(F,G,A), F<G.
+notPrfEquiv(G,F) :- outDiff(F,G,A), F>G.
+notPrfEquiv(F,G) :- prfDifference(F,G,E), F<G.
+notPrfEquiv(G,F) :- prfDifference(F,G,E), F>G.
+notPrfEquiv(F,G) :- prfc(F,E), prfc(G,E), notBothOutPlus(F,G,E,A), F<G.
+notPrfEquiv(G,F) :- prfc(F,E), prfc(G,E), notBothOutPlus(F,G,E,A), F>G.
+notPrfEquiv(F,G) :- prfc(F,E), prfc(G,E), notBothEOut(F,G,E,A), F<G.
+notPrfEquiv(G,F) :- prfc(F,E), prfc(G,E), notBothEOut(F,G,E,A), F>G.
+
+%evaluation
+prfEquiv(F,G) :- not notPrfEquiv(F,G), af(F), af(G), F<G.

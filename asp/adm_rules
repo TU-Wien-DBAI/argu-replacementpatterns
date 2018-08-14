@@ -1,0 +1,20 @@
+%an extension that is attacked by an argument in anc, attacks that one as well (admc)
+undef(F,E) :- argument(F,A), #member(A,C), core(C), isAttacking(F,A,E), cf(F,E), not isAttacked(F,A,E).
+admc(F,E) :- not undef(F,E), cf(F,E).
+
+%equivalency between AFs wrt c-restricted admissible semantics
+%(2) adm_C(F)=adm_C(G)
+adDifference(F,G,E) :- admc(F,E), not admc(G,E), arguments(F,X), arguments(G,Y).
+
+%admissible inequivalency predicate
+notAdEquiv(F,G) :- outDiff(F,G,A), F<G.
+notAdEquiv(G,F) :- outDiff(F,G,A), F>G.
+notAdEquiv(F,G) :- adDifference(F,G,E), F<G.
+notAdEquiv(G,F) :- adDifference(F,G,E), F>G.
+notAdEquiv(F,G) :- admc(F,E), admc(G,E), notBothOutPlus(F,G,E,A), F<G.
+notAdEquiv(G,F) :- admc(F,E), admc(G,E), notBothOutPlus(F,G,E,A), F>G.
+notAdEquiv(F,G) :- admc(F,E), admc(G,E), notBothEOut(F,G,E,A), F<G.
+notAdEquiv(G,F) :- admc(F,E), admc(G,E), notBothEOut(F,G,E,A), F>G.
+
+%evaluation
+admEquiv(F,G) :- not notAdEquiv(F,G), af(F), af(G), F<G.

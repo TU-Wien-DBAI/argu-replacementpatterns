@@ -1,0 +1,70 @@
+%E ∈ com_C(F) if E ∈ cf(F) and E = F_{F,C,E}(E).
+comc(F,E) :- cf(F,E), not notCom(F,E).
+notCom(F,E) :- argument(F,A), cf(F,E), #member(A,E), notInLeft(F,E,E,A), notInRight(F,E,A). %argument not fixed, but still in E
+notCom(F,E) :- argument(F,A), cf(F,E), not #member(A,E), not notInRight(F,E,A), core(C), #member(A,C). %argument fixed, but not in E
+
+%F_{F,C,E}(S) = {a∈E | ∀c∈C : (c,a)∈R(F) → c∈S⁺_F} ∪ {c∈C∩A(F) | ∀(b,c) ∈ R(F) : b∈ S⁺_F∪(S⁻_F\C)}
+%{a∈E | ∀c∈C : (c,a)∈R(F) → c∈S⁺_F}
+notInLeft(F,E,S,A) :- argument(F,A), argument(F,B), cf(F,E), core(C), #member(A,E), #member(B,C), attack(F,B,A), not isAttacked(F,B,S), cf(F,S).
+
+%{c∈C∩A(F) | ∀(b,c) ∈ R(F) : b∈ S⁺_F∪(S⁻_F\C)}
+notInRight(F,S,A) :- argSet(F,S), argument(F,A), core(C), #member(A,C), argument(F,B), attack(F,B,A), not inSubUnion(F,S,B).
+notInRight(F,S,A) :- argSet(F,S), argument(F,A), core(C), not #member(A,C), #member(A,S). %non-core arguments are also never in right
+
+%b∈ S⁺_F∪(S⁻_F\C)
+inSubUnion(F,E,B) :- argument(F,B), core(C), not #member(B,C), isAttacking(F,B,E).
+inSubUnion(F,E,B) :- cf(F,E), isAttacked(F,B,E), argument(F,B).
+
+%equivalency between AFs wrt c-restricted complete semantics
+%(2) com_C(F)=com_C(G)
+comDifference(F,G,E) :- comc(F,E), not comc(G,E), arguments(F,X), arguments(G,Y).
+
+%(3c) for all S with E⁻_F\E⁺_F ⊆ S ⊆ A(F)\(C∪E), if F_{F\S}(E)∩C = E∩C or F_{G\S}(E)∩C = E∩C then F_{F\S}(E) = F_{G\S}(E).
+%(a) check for all S for any given E if E⁻_F\E⁺_F ⊆ S ⊆ A(F)\(C∪E)
+%check E⁻_F\E⁺_F ⊆ S
+eoutNonS(F,E,S) :- argument(F,A), argSet(F,S), comc(F,E), eout(F,E,A), not #member(A,S).
+eoutS(F,E,S) :- argSet(F,S), comc(F,E), not eoutNonS(F,E,S).
+%check S ⊆ A(F)\(C∪E)
+SinC(F,S) :- argument(F,A), argSet(F,S), core(C), #member(A,S), #member(A,C).
+SinE(F,E,S) :- argument(F,A), argSet(F,S), comc(F,E), #member(A,S), #member(A,E).
+SinA(F,E,S) :- argSet(F,S), comc(F,E), not SinC(F,S), not SinE(F,E,S).
+%check both conditions at the same time
+legalS(F,E,S) :- eoutS(F,E,S), SinA(F,E,S).
+
+%(b) if SLegal -> check for both AFs
+%(1) F_{F\S}(E)∩C = E∩C or (2) F_{G\S}(E)∩C = E∩C
+%construct F_{F\S}(E)∩C
+%construct F_{F\S}(E) = {x∈A | x⁻_{F\S}⊆E⁺_{F\S} } and F_{G\S}(E)
+%compute arguments in x⁻_{F\S} = {a | (a,x) in R(F\S)}
+attackX(F,S,X,A) :- argument(F,A), argument(F,X), argSet(F,S), not #member(X,S), not #member(A,S), attack(F,A,X).
+%compute x⁻_{F\S}⊆E⁺{F\S}
+notXinEplus(F,S,X,E) :- argument(F,X), argSet(F,S), attackX(F,S,X,A), argument(F,A), not isAttacked(F,A,E), comc(F,E), not #member(X,S), not #member(A,S).
+%F_{F\S}(E) arguments:
+xinEplus(F,S,X,E) :- argSet(F,S), comc(F,E), argument(F,X), not notXinEplus(F,S,X,E), not #member(X,S).
+%compute whether F_{F\S}(E)∩C = E∩C
+unequalWithoutS(F,S,E) :- xinEplus(F,S,E,X), core(C), #member(X,C), comc(F,E), not #member(X,E), argument(F,X), argSet(F,S).
+unequalWithoutS(F,S,E) :- not xinEplus(F,S,E,X), core(C), #member(X,C), comc(F,E), #member(X,E), argument(F,X), argSet(F,S).
+
+%(b) if at least one -> check
+%		F_{F\S}(E) = F_{G\S}(E), below F/G can be in any order, but combination with xinEplus is necessary twice
+unequalFWWithoutS(F,G,S,E) :- not unequalWithoutS(F,S,E), xinEplus(F,S,X,E), not xinEplus(G,S,X,E), argument(F,X), argument(G,X).
+unequalFWWithoutS(F,G,S,E) :- not unequalWithoutS(F,S,E), not xinEplus(F,S,X,E), xinEplus(G,S,X,E), argument(F,X), argument(G,X).
+equalFWWithoutS(F,G,S,E) :- not unequalFWWithoutS(F,G,S,E), argSet(F,S), argSet(G,S), comc(F,E), comc(G,E), F!=G.
+
+%for all S with E⁻_F\E⁺_F ⊆ S ⊆ A(F)\(C∪E), if F_{F\S}(E)∩C = E∩C or F_{G\S}(E)∩C = E∩C then F_{F\S}(E) = F_{G\S}(E).
+equalityNotImplied(F,G) :- comc(F,E), comc(G,E), legalS(F,E,S), not unequalWithoutS(F,S,E), not equalFWWithoutS(F,G,S,E), F!=G.
+equalityNotImplied(F,G) :- comc(F,E), comc(G,E), legalS(F,E,S), not unequalWithoutS(G,S,E), not equalFWWithoutS(F,G,S,E), F!=G.
+
+%complete inequivalency predicate
+notComEquiv(F,G) :- outDiff(F,G,A), F<G.
+notComEquiv(G,F) :- outDiff(F,G,A), F>G.
+notComEquiv(F,G) :- comDifference(F,G,E), F<G.
+notComEquiv(G,F) :- comDifference(F,G,E), F>G.
+notComEquiv(F,G) :- comc(F,E), comc(G,E), notBothOutPlus(F,G,E,A), F<G.
+notComEquiv(G,F) :- comc(F,E), comc(G,E), notBothOutPlus(F,G,E,A), F>G.
+notComEquiv(F,G) :- comc(F,E), comc(G,E), notBothEOut(F,G,E,A), F<G.
+notComEquiv(G,F) :- comc(F,E), comc(G,E), notBothEOut(F,G,E,A), F>G.
+notComEquiv(F,G) :- equalityNotImplied(F,G), F!=G. 
+
+%evaluation
+comEquiv(F,G) :- not notComEquiv(F,G), af(F), af(G), F<G.
