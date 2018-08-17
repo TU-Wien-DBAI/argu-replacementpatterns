@@ -47,6 +47,7 @@ computes extensions for a given semantics for a directory of files
 then logs computation times to logfile in location of script
 
 Synopsis: python timing_script.py <expath> <dirpath> <sempath> [--printout]
+
 	expath - path to dlv executable or just write clingo to use clingo
 	dirpath - path to files to compute extensions for
 	sempath - path to file of ASPARTIX semantics encoding
