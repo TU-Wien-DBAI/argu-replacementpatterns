@@ -15,6 +15,7 @@ replaces isomorphic subgraphs fitting a provided equivalence pattern
 use the IsoSub.class file in the bin/isosub directory
 
 Synopsis: java IsoSub <pattern_path> <data_path> <replacement_path> <stats_path> [-s <int>] [-e <int>]
+
 	pattern_path - path to the pattern file
 	data_path - path to either a directory of/or single database graph file(s)
 	replacement_path - path to replacement graph file
