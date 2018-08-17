@@ -44,10 +44,10 @@ public class IsoSub {
 		ArrayList<GraphInfo> graphInfos = new ArrayList<GraphInfo>();
 
 		if(startFileIndex == null){
-			startFileIndex = 400;
+			startFileIndex = 0;
 		}
 		if(endFileIndex == null){
-			endFileIndex = 450;
+			endFileIndex = 500;
 		}
 
 		if(startFileIndex < 0){
