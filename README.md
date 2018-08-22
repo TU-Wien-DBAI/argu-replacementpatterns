@@ -13,6 +13,7 @@ isosub_replace:
 replaces isomorphic subgraphs fitting a provided equivalence pattern
 
 use the IsoSub.class file in the bin/isosub directory
+Please note: the sample size of 50000 isomorphic subgraphs can be changed within the code, but must be newly compiled
 
 Synopsis: java IsoSub <pattern_path> <data_path> <replacement_path> <stats_path> [-s <int>] [-e <int>]
 
